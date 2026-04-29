@@ -138,11 +138,14 @@ class ProjectListItem extends React.Component {
     Dropzone.autoDiscover = false;
 
     let parallelUploads = 4;
-    // on http2 there's diminishing benefits of using parallel uploads
-    // and bad connections can actually hurt performance
     try{
-      if (performance && performance.getEntriesByType('navigation')[0].nextHopProtocol === 'h2'){
-        parallelUploads = 1;
+      if (performance){
+        const [navigation] = performance.getEntriesByType('navigation');
+        // on http2 there's diminishing benefits of using parallel uploads
+        // and bad connections can actually hurt performance
+        if (navigation.nextHopProtocol === 'h2'){
+          parallelUploads = 1;
+        }
       }
     }catch(e){
       console.warn("Cannot infer http2 status");
@@ -180,7 +183,7 @@ class ProjectListItem extends React.Component {
           const remainingFilesCount = this.state.upload.totalCount - this.state.upload.uploadedCount;
           if (remainingFilesCount === 0 && this.state.upload.uploadedCount > 0){
             // All files have uploaded!
-            const COMMIT_RETRIES = 10;
+            const COMMIT_RETRIES = 20;
 
             const commitUploads = (attempt) => {
               const retryCommit = () => {
@@ -190,7 +193,7 @@ class ProjectListItem extends React.Component {
                     if (this.state.upload.uploading){
                       commitUploads(attempt + 1);
                     }
-                  }, 5000 * attempt);
+                  }, 2500 * attempt);
                 }else{
                   this.setUploadState({uploading: false, error: _("Cannot create new task. Please try again later.")});
                 }
@@ -293,7 +296,7 @@ class ProjectListItem extends React.Component {
         .on("complete", (file) => {
             // Retry
             const retry = () => {
-                const MAX_RETRIES = 20;
+                const MAX_RETRIES = 30;
 
                 if (!file.accepted){
                   throw new Error(interpolate(_('%(filename)s is not a valid file'), {filename: file.name }));
@@ -315,7 +318,7 @@ class ProjectListItem extends React.Component {
                     file.retries++;
                     setTimeout(() => {
                       this.dz.processQueue();
-                    }, 5000 * file.retries);
+                    }, 2500 * file.retries);
                 }else{
                     throw new Error(interpolate(_('Cannot upload %(filename)s, exceeded max retries (%(max_retries)s)'), {filename: file.name, max_retries: MAX_RETRIES}));
                 }
