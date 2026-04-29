@@ -147,7 +147,7 @@ class ManageMediaDialog extends React.Component {
         .on("complete", (file) => {
             // Retry
             const retry = () => {
-                const MAX_RETRIES = 5;
+                const MAX_RETRIES = 15;
 
                 if (!file.accepted){
                   throw new Error(interpolate(_('%(filename)s is not a valid file'), {filename: file.name }));
@@ -169,7 +169,7 @@ class ManageMediaDialog extends React.Component {
                     file.retries++;
                     setTimeout(() => {
                       this.dz.processQueue();
-                    }, 5000 * file.retries);
+                    }, 2500 * file.retries);
                 }else{
                     throw new Error(interpolate(_('Cannot upload %(filename)s, exceeded max retries (%(max_retries)s)'), {filename: file.name, max_retries: MAX_RETRIES}));
                 }
