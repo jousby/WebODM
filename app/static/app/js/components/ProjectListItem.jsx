@@ -137,11 +137,22 @@ class ProjectListItem extends React.Component {
   componentDidMount(){
     Dropzone.autoDiscover = false;
 
+    let parallelUploads = 4;
+    // on http2 there's diminishing benefits of using parallel uploads
+    // and bad connections can actually hurt performance
+    try{
+      if (performance && performance.getEntriesByType('navigation')[0].nextHopProtocol === 'h2'){
+        parallelUploads = 1;
+      }
+    }catch(e){
+      console.warn("Cannot infer http2 status");
+    }
+
     if (this.hasPermission("add")){
       this.dz = new Dropzone(this.dropzone, {
           paramName: "images",
           url : 'TO_BE_CHANGED',
-          parallelUploads: 4,
+          parallelUploads,
           uploadMultiple: false,
           acceptedFiles: "image/*,text/plain,.las,.laz,video/*,.srt,.dng,.nef",
           autoProcessQueue: false,
@@ -158,6 +169,60 @@ class ProjectListItem extends React.Component {
             [csrf.header]: csrf.token
           }
       });
+
+      const checkQueueCompleted = () => {
+        // Prevent double calls to /commit
+        if (this.checkTimeout){
+          clearTimeout(this.checkTimeout);
+          this.checkTimeout = null;
+        }
+        this.checkTimeout = setTimeout(() => {
+          const remainingFilesCount = this.state.upload.totalCount - this.state.upload.uploadedCount;
+          if (remainingFilesCount === 0 && this.state.upload.uploadedCount > 0){
+            // All files have uploaded!
+            const COMMIT_RETRIES = 10;
+
+            const commitUploads = (attempt) => {
+              const retryCommit = () => {
+                if (attempt < COMMIT_RETRIES){
+                  console.warn(`Commit failed, retrying... (${attempt})`);
+                  setTimeout(() => {
+                    if (this.state.upload.uploading){
+                      commitUploads(attempt + 1);
+                    }
+                  }, 5000 * attempt);
+                }else{
+                  this.setUploadState({uploading: false, error: _("Cannot create new task. Please try again later.")});
+                }
+              };
+
+              $.ajax({
+                  url: `/api/projects/${this.state.data.id}/tasks/${this.dz._taskInfo.id}/commit/`,
+                  contentType: 'application/json',
+                  dataType: 'json',
+                  type: 'POST',
+                  timeout: 30000,
+                }).done((task) => {
+                  if (task && task.id){
+                      this.setUploadState({uploading: false});
+                      this.newTaskAdded();
+                  }else{
+                    retryCommit();
+                  }
+                }).fail(() => {
+                  retryCommit();
+                });
+            };
+            commitUploads(0);
+          }else if (this.dz.getQueuedFiles() === 0){
+              // Done but didn't upload all?
+              this.setUploadState({
+                  uploading: false,
+                  error: interpolate(_('%(count)s files cannot be uploaded. As a reminder, only images (.jpg, .tif, .png) and GCP files (.txt) can be uploaded. Try again.'), { count: remainingFilesCount })
+              });
+          }
+        }, 250);
+      };
 
       this.dz.on("addedfiles", files => {
           let totalBytes = 0;
@@ -284,6 +349,8 @@ class ProjectListItem extends React.Component {
                             totalBytesSent,
                             uploadedCount: this.state.upload.uploadedCount + 1
                         });
+
+                        checkQueueCompleted();
                       }else{
                         // Chunk success, wait for end
                       }
@@ -303,54 +370,6 @@ class ProjectListItem extends React.Component {
 
                 if (this.dz.files.length) this.dz.cancelUpload();
             }
-        })
-        .on("queuecomplete", () => {
-          setTimeout(() => {
-            const remainingFilesCount = this.state.upload.totalCount - this.state.upload.uploadedCount;
-            if (remainingFilesCount === 0 && this.state.upload.uploadedCount > 0){
-                // All files have uploaded!
-                const COMMIT_RETRIES = 10;
-
-                const commitUploads = (attempt) => {
-                  const retryCommit = () => {
-                    if (attempt < COMMIT_RETRIES){
-                      console.warn(`Commit failed, retrying... (${attempt})`);
-                      setTimeout(() => {
-                        if (this.state.upload.uploading){
-                          commitUploads(attempt + 1);
-                        }
-                      }, 5000 * attempt);
-                    }else{
-                      this.setUploadState({uploading: false, error: _("Cannot create new task. Please try again later.")});
-                    }
-                  };
-
-                  $.ajax({
-                      url: `/api/projects/${this.state.data.id}/tasks/${this.dz._taskInfo.id}/commit/`,
-                      contentType: 'application/json',
-                      dataType: 'json',
-                      type: 'POST',
-                      timeout: 30000,
-                    }).done((task) => {
-                      if (task && task.id){
-                          this.setUploadState({uploading: false});
-                          this.newTaskAdded();
-                      }else{
-                        retryCommit();
-                      }
-                    }).fail(() => {
-                      retryCommit();
-                    });
-                };
-                commitUploads(0);
-            }else if (this.dz.getQueuedFiles() === 0){
-                // Done but didn't upload all?
-                this.setUploadState({
-                    uploading: false,
-                    error: interpolate(_('%(count)s files cannot be uploaded. As a reminder, only images (.jpg, .tif, .png) and GCP files (.txt) can be uploaded. Try again.'), { count: remainingFilesCount })
-                });
-            }
-          }, 100);
         })
         .on("reset", () => {
           this.resetUploadState();
