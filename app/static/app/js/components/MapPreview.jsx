@@ -13,18 +13,22 @@ import { _, interpolate } from '../classes/gettext';
 import CropButton from './CropButton';
 import 'leaflet-fullscreen/dist/Leaflet.fullscreen';
 import 'leaflet-fullscreen/dist/leaflet.fullscreen.css';
+import '../vendor/leaflet/Leaflet.Autolayers/css/leaflet.auto-layers.css';
+import '../vendor/leaflet/Leaflet.Autolayers/leaflet-autolayers';
 
 class MapPreview extends React.Component {
   static defaultProps = {
     getFiles: null,
     onPolygonChange: () => {},
-    onImagesBboxChanged: () => {}
+    onImagesBboxChanged: () => {},
+    basemaps: []
   };
     
   static propTypes = {
     getFiles: PropTypes.func.isRequired,
     onPolygonChange: PropTypes.func,
-    onImagesBboxChanged: PropTypes.func
+    onImagesBboxChanged: PropTypes.func,
+    basemaps: PropTypes.array
   };
 
   constructor(props) {
@@ -63,13 +67,77 @@ class MapPreview extends React.Component {
          position:'bottomleft'
     }).addTo(this.map);
 
-    const basemap = L.tileLayer("//tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxNativeZoom: 19,
-      maxZoom: 19 + 99,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      label: "OpenStreetMap"
+    this.basemaps = {};
+    const basemaps = this.props.basemaps;
+    if (basemaps.length > 0) {
+      let defaultBmLayer = null;
+      let osmLayer = null;
+
+      basemaps.forEach(bm => {
+        let layer;
+        const opts = {
+          layers: bm.layers || '0',
+          styles: bm.styles || 'default',
+          format: bm.format || 'image/png',
+          transparent: (bm.format || 'image/png') == 'image/png',
+          attribution: bm.attribution || bm.label,
+          maxZoom: (bm.maxzoom || 21) + 99,
+          maxNativeZoom: bm.maxzoom || 21,
+          minZoom: bm.minzoom || 0,
+          subdomains: bm.subdomains || [],
+        }
+        if (bm.type === 'wms') {
+          layer = L.tileLayer.wms(bm.url, opts);
+        } else {
+          layer = L.tileLayer(bm.url, opts);
+        }
+
+        if (bm['default']) {
+          defaultBmLayer = layer;
+        }
+        if (bm.label === "OpenStreetMap"){
+          osmLayer = layer;
+        }
+
+        this.basemaps[bm.label] = layer;
+      });
+      
+      // Prioritize OSM layer for map preview (if available)
+      if (osmLayer) osmLayer.addTo(this.map);
+      else if (defaultBmLayer) defaultBmLayer.addTo(this.map);
+    }
+
+    const customLayer = L.layerGroup();
+    customLayer.on("add", a => {
+      const defaultCustomBm = window.localStorage.getItem('lastCustomBasemap') || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+      let url = window.prompt([_('Enter a tile URL template. Valid coordinates are:'),
+_('{z}, {x}, {y} for Z/X/Y tile scheme'),
+_('{−y} for flipped TMS-style Y coordinates'),
+'',
+_('Example:'),
+'https://tile.openstreetmap.org/{z}/{x}/{y}.png'].join("\n"), defaultCustomBm);
+
+      if (url){
+        customLayer.clearLayers();
+        const l = L.tileLayer(url, {
+          maxNativeZoom: 24,
+          maxZoom: 99,
+          minZoom: 0
+        });
+        customLayer.addLayer(l);
+        l.bringToBack();
+        window.localStorage.setItem('lastCustomBasemap', url);
+      }
     });
-    basemap.addTo(this.map);
+    this.basemaps[_("Custom")] = customLayer;
+    this.basemaps[_("None")] = L.layerGroup();
+
+    this.autolayers = Leaflet.control.autolayers({
+      overlays: {},
+      selectedOverlays: [],
+      baseLayers: this.basemaps
+    }).addTo(this.map);
 
     this.map.addControl(new L.Control.Fullscreen({
         position: 'bottomleft'

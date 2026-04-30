@@ -79,7 +79,8 @@ class TestBasemap(BootTestCase):
         )
         
         for url in ['/map/project/{}/'.format(project.id),
-                   '/public/task/{}/map/'.format(task.id)]:
+                   '/public/task/{}/map/'.format(task.id),
+                   '/dashboard/']:
             response = client.get(url)
 
             self.assertEqual(response.status_code, status.HTTP_200_OK)
