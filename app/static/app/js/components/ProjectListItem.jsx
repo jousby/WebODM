@@ -137,25 +137,11 @@ class ProjectListItem extends React.Component {
   componentDidMount(){
     Dropzone.autoDiscover = false;
 
-    let parallelUploads = 4;
-    try{
-      if (performance){
-        const [navigation] = performance.getEntriesByType('navigation');
-        // on http2 there's diminishing benefits of using parallel uploads
-        // and bad connections can actually hurt performance
-        if (navigation.nextHopProtocol === 'h2'){
-          parallelUploads = 1;
-        }
-      }
-    }catch(e){
-      console.warn("Cannot infer http2 status");
-    }
-
     if (this.hasPermission("add")){
       this.dz = new Dropzone(this.dropzone, {
           paramName: "images",
           url : 'TO_BE_CHANGED',
-          parallelUploads,
+          parallelUploads: 4,
           uploadMultiple: false,
           acceptedFiles: "image/*,text/plain,.las,.laz,video/*,.srt,.dng,.nef",
           autoProcessQueue: false,
