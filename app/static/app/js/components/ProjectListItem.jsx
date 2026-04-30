@@ -20,12 +20,16 @@ import { _, interpolate } from '../classes/gettext';
 import $ from 'jquery';
 
 class ProjectListItem extends React.Component {
+  static defaultProps = {
+    basemaps: []
+  }
   static propTypes = {
       history: PropTypes.object.isRequired,
       data: PropTypes.object.isRequired, // project json
       onDelete: PropTypes.func,
       onTaskMoved: PropTypes.func,
-      onProjectDuplicated: PropTypes.func
+      onProjectDuplicated: PropTypes.func,
+      basemaps: PropTypes.array
   }
 
   constructor(props){
@@ -858,6 +862,7 @@ class ProjectListItem extends React.Component {
               showAlign={numTasks > 0}
               projectId={this.state.data.id}
               getFiles={() => this.state.upload.files }
+              basemaps={this.props.basemaps}
             />
           : ""}
 
