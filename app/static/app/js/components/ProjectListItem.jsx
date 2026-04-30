@@ -862,7 +862,7 @@ class ProjectListItem extends React.Component {
         </div>
         <i className="drag-drop-icon fa fa-inbox"></i>
         <div className="row">
-          {this.state.upload.serverTimeouts >= 4 ? 
+          {this.state.upload.serverTimeouts >= 5 ? 
             <div className="alert alert-warning alert-dismissible">
               <button type="button" className="close" title={_("Close")} onClick={this.resetServerTimeouts}><span aria-hidden="true">&times;</span></button>
               <i className="fa fa-exclamation-triangle"></i> {_("Unstable connection detected. If you the upload gets stuck, press the button below to enable stable mode. You will then need to restart the upload.")}
