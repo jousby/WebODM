@@ -865,7 +865,7 @@ class ProjectListItem extends React.Component {
           {this.state.upload.uploading && this.state.upload.serverTimeouts >= 5 ? 
             <div className="alert alert-warning alert-dismissible">
               <button type="button" className="close" title={_("Close")} onClick={this.resetServerTimeouts}><span aria-hidden="true">&times;</span></button>
-              <i className="fa fa-exclamation-triangle"></i> {_("Unstable connection detected. If you the upload gets stuck, press the button below to enable stable mode. You will then need to restart the upload.")}
+              <i className="fa fa-exclamation-triangle"></i> {_("Unstable connection detected. If the upload gets stuck, press the button below to enable stable mode. You will then need to restart the upload.")}
               <button style={{display: "block", marginTop: 16}} type="button" className="btn btn-primary btn-sm" 
                 onClick={this.enableStableMode}
               ><i className="fa fa-plug"></i> {_("Enable Stable Mode")}
