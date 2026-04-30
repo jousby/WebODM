@@ -302,9 +302,17 @@ class ProjectListItem extends React.Component {
                     file.deltaBytesSent = 0;
                     file.trackedBytesSent = 0;
                     file.retries++;
+                    
+                    const retryTime = 2500 * file.retries;
+
+                    // Update serverTimeout so that its at lest 3x retryTime
+                    // otherwise a file waiting to be retried could trigger 
+                    // a serverTimeout
+                    this.dz.options.serverTimeout = Math.max(this.dz.options.serverTimeout, 3 * retryTime);
+
                     setTimeout(() => {
                       this.dz.processQueue();
-                    }, 2500 * file.retries);
+                    }, retryTime);
                 }else{
                     throw new Error(interpolate(_('Cannot upload %(filename)s, exceeded max retries (%(max_retries)s)'), {filename: file.name, max_retries: MAX_RETRIES}));
                 }
