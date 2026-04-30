@@ -12,6 +12,7 @@ import SortPanel from './SortPanel';
 import Dropzone from '../vendor/dropzone';
 import csrf from '../django/csrf';
 import HistoryNav from '../classes/HistoryNav';
+import Storage from '../classes/Storage';
 import PropTypes from 'prop-types';
 import ResizeModes from '../classes/ResizeModes';
 import Tags from '../classes/Tags';
@@ -118,7 +119,8 @@ class ProjectListItem extends React.Component {
       uploadedCount: 0,
       totalBytes: 0,
       totalBytesSent: 0,
-      lastUpdated: 0
+      lastUpdated: 0,
+      serverTimeouts: 0
     };
   }
 
@@ -142,10 +144,12 @@ class ProjectListItem extends React.Component {
     Dropzone.autoDiscover = false;
 
     if (this.hasPermission("add")){
+      const unstableConnection = !!Storage.getItem("unstable_connection");
+
       this.dz = new Dropzone(this.dropzone, {
           paramName: "images",
           url : 'TO_BE_CHANGED',
-          parallelUploads: 4,
+          parallelUploads: unstableConnection ? 1 : 4,
           uploadMultiple: false,
           acceptedFiles: "image/*,text/plain,.las,.laz,video/*,.srt,.dng,.nef",
           autoProcessQueue: false,
@@ -154,9 +158,14 @@ class ProjectListItem extends React.Component {
           maxFilesize: 131072, // 128G
           timeout: 2147483647,
           chunking: true,
-          chunkSize: 8000000, // 8MB,
+          chunkSize: unstableConnection ? 1000000 : 8000000, // 8MB,
           retryChunks: true,
           retryChunksLimit: 20,
+          serverTimeoutCallback: () => {
+            if (!unstableConnection){
+              this.setUploadState({serverTimeouts: this.state.upload.serverTimeouts + 1});
+            }
+          },
           
           headers: {
             [csrf.header]: csrf.token
@@ -431,6 +440,10 @@ class ProjectListItem extends React.Component {
     this.setUploadState({error: ""});
   }
 
+  resetServerTimeouts = () => {
+    this.setUploadState({serverTimeouts: 0});
+  }
+
   cancelUpload(){
     this.dz.removeAllFiles(true);
   }
@@ -690,6 +703,12 @@ class ProjectListItem extends React.Component {
     }
   }
 
+  enableStableMode = () => {
+    Storage.setItem("unstable_connection", "1");
+    this.handleTaskCanceled();
+    location.reload(true);
+  }
+
   render() {
     const { refreshing, data, filterTags } = this.state;
     const numTasks = data.tasks.length;
@@ -843,6 +862,17 @@ class ProjectListItem extends React.Component {
         </div>
         <i className="drag-drop-icon fa fa-inbox"></i>
         <div className="row">
+          {this.state.upload.uploading && this.state.upload.serverTimeouts >= 5 ? 
+            <div className="alert alert-warning alert-dismissible">
+              <button type="button" className="close" title={_("Close")} onClick={this.resetServerTimeouts}><span aria-hidden="true">&times;</span></button>
+              <i className="fa fa-exclamation-triangle"></i> {_("Unstable connection detected. If the upload gets stuck, press the button below to enable stable mode. You will then need to restart the upload.")}
+              <button style={{display: "block", marginTop: 16}} type="button" className="btn btn-primary btn-sm" 
+                onClick={this.enableStableMode}
+              ><i className="fa fa-plug"></i> {_("Enable Stable Mode")}
+              </button>
+            </div>
+          : ""}
+
           {this.state.upload.uploading ? <UploadProgressBar {...this.state.upload}/> : ""}
           
           {this.state.upload.error !== "" ? 

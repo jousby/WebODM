@@ -172,6 +172,9 @@ var Dropzone = function (_Emitter) {
         
         // Timeout when receiving a response from the server
         serverTimeout: 30000,
+        
+        // Called when a server timeout is triggered
+        serverTimeoutCallback: function(){},
 
         /**
          * How many file uploads to process in parallel (See the
@@ -2562,6 +2565,7 @@ var Dropzone = function (_Emitter) {
           if (xhr._lastProgressUpdate && new Date().getTime() - xhr._lastProgressUpdate > _this16.options.serverTimeout){
             xhr.abort();
             _this16._handleUploadError(files, xhr);
+            if (typeof _this16.options.serverTimeoutCallback === 'function') _this16.options.serverTimeoutCallback();
             clearInterval(xhr._serverCheck);
             xhr._serverCheck = null;
             xhr._lastProgressUpdate = null;
