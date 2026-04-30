@@ -1287,6 +1287,12 @@ var Dropzone = function (_Emitter) {
 
       // Emit a `queuecomplete` event if all files finished uploading.
       this.on("complete", function (file) {
+        if (file && file.xhr && file.xhr._serverCheck){
+          clearInterval(file.xhr._serverCheck);
+          file.xhr._serverCheck = null;
+          file.xhr._lastProgressUpdate = null;
+        }
+
         if (_this3.getAddedFiles().length === 0 && _this3.getUploadingFiles().length === 0 && _this3.getQueuedFiles().length === 0) {
           // This needs to be deferred so that `queuecomplete` really triggers after `complete`
           return setTimeout(function () {
