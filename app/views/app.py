@@ -93,7 +93,7 @@ def map(request, project_pk=None, task_pk=None):
                 'map-items': json.dumps(mapItems),
                 'title': title,
                 'public': 'false',
-                'share-buttons': 'false' if settings.DESKTOP_MODE else 'true',
+                'share-buttons': 'true',
                 'permissions': json.dumps(get_permissions(request.user, project)),
                 'project': json.dumps(projectInfo),
                 'basemaps': json.dumps(Basemap.get_cached_basemaps()),
@@ -122,7 +122,7 @@ def model_display(request, project_pk=None, task_pk=None):
             'params': {
                 'task': json.dumps(task.get_model_display_params()),
                 'public': 'false',
-                'share-buttons': 'false' if settings.DESKTOP_MODE else 'true'
+                'share-buttons': 'true'
             }.items()
         })
 
