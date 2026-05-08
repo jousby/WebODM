@@ -54,7 +54,7 @@ def handle_map(request, template, uuid_type=None, uuid=None, hide_title=False):
             'title': title if not hide_title else '',
             'public': 'true',
             'public-edit': str(public_edit).lower(),
-            'share-buttons': 'false' if settings.DESKTOP_MODE else 'true',
+            'share-buttons': 'true',
             'selected-map-type': request.GET.get('t', 'auto'),
             'permissions': json.dumps(permissions),
             'project': json.dumps(projectInfo),
@@ -81,7 +81,7 @@ def handle_model_display(request, template, task_pk=None):
                 'task': json.dumps(task.get_model_display_params()),
                 'public': 'true',
                 'public-edit': str(task.public_edit).lower(),
-                'share-buttons': 'false' if settings.DESKTOP_MODE else 'true',
+                'share-buttons': 'true',
                 'model-type': request.GET.get('t', 'cloud'),
             }.items()
         })
