@@ -79,6 +79,16 @@ class SettingAdmin(admin.ModelAdmin):
         # if there's already an entry, do not allow adding
         return not Setting.objects.exists()
 
+    def has_delete_permission(self, request, obj=None):
+        return Setting.objects.count() > 1
+    
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        form.base_fields['theme'].widget.can_add_related = False
+        form.base_fields['theme'].widget.can_change_related = False
+        form.base_fields['theme'].widget.can_delete_related = False
+        
+        return form
 
 admin.site.register(Setting, SettingAdmin)
 
@@ -113,6 +123,11 @@ class ThemeModelForm(forms.ModelForm):
 
 class ThemeAdmin(admin.ModelAdmin):
     form = ThemeModelForm
+
+    def has_delete_permission(self, request, obj=None):
+        if Theme.objects.count() <= 1:
+            return False
+        return super().has_delete_permission(request, obj)
 
 
 admin.site.register(Theme, ThemeAdmin)
