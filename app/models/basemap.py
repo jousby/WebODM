@@ -1,3 +1,4 @@
+import redis
 from django.core.cache import cache
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models, transaction
@@ -46,7 +47,10 @@ class Basemap(models.Model):
 
     @classmethod
     def invalidate_cache(cls):
-        cache.delete(cls.CACHE_KEY)
+        try:
+            cache.delete(cls.CACHE_KEY)
+        except redis.exceptions.ConnectionError:
+            pass
 
     @classmethod
     def get_cached_basemaps(cls):
