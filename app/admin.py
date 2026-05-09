@@ -6,6 +6,8 @@ import shutil
 from django.conf.urls import url
 from django.contrib import admin
 from django.contrib import messages
+from django.contrib.admin.widgets import AdminFileWidget
+from django.core.files import File
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils.html import format_html
@@ -73,7 +75,54 @@ admin.site.register(Task, TaskAdmin)
 admin.site.register(Preset, admin.ModelAdmin)
 
 
+class AppLogoWidget(AdminFileWidget):
+    template_name = 'admin/widgets/app_logo_file_input.html'
+
+
+class SettingAdminForm(forms.ModelForm):
+    class Meta:
+        model = Setting
+        fields = '__all__'
+        widgets = {
+            'app_logo': AppLogoWidget(),
+        }
+
+
 class SettingAdmin(admin.ModelAdmin):
+    form = SettingAdminForm
+    fields = ('app_name', 'app_logo', 'app_logo_preview', 'restore_default_logo',
+              'organization_name', 'organization_website', 'theme')
+    readonly_fields = ('app_logo_preview', 'restore_default_logo')
+
+    @staticmethod
+    def set_default_logo(obj):
+        default_logo_path = os.path.join(settings.BASE_DIR, 'app', 'static', 'app', 'img', 'logo512.png')
+        if not os.path.exists(default_logo_path):
+            return False
+
+        with open(default_logo_path, 'rb') as default_logo_file:
+            obj.app_logo.save('logo512.png', File(default_logo_file), save=False)
+        return True
+
+    def save_model(self, request, obj, form, change):
+        if '_restore_default_logo' in request.POST:
+            if not self.set_default_logo(obj):
+                messages.error(request, _("Cannot restore default logo"))
+
+        super().save_model(request, obj, form, change)
+
+    def app_logo_preview(self, obj):
+        if not obj or not obj.app_logo:
+            return '-'
+
+        logo_url = '/media/{}'.format(obj.app_logo.url)
+        return format_html(f'<img src="{logo_url}" style="position: relative; left: -9px; max-height: 64px; padding: 4px; background: {obj.theme.header_background};"/>')
+
+    def restore_default_logo(self, obj):
+        return format_html(
+            '<button type="submit" style="padding: 6px; position: relative; left: -9px;" class="button" name="_restore_default_logo" value="1">{}</button>',
+            _('Restore Default')
+        )
 
     def has_add_permission(self, request):
         # if there's already an entry, do not allow adding
