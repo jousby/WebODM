@@ -479,10 +479,16 @@ class TaskListItem extends React.Component {
   }
 
   displayPdf = (url, opts) => {
-    this.setState({displayPdf: {
-      url,
-      title: opts.title || ""
-    }})
+    if (Utils.isIOS()){
+      // PDF viewer in iOS only displays the first page
+      // open in a new tab instead
+      window.open(url, "pdf_report");
+    }else{
+      this.setState({displayPdf: {
+        url,
+        title: opts.title || ""
+      }})
+    }
   }
 
   hidePdf = () => {
