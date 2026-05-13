@@ -162,7 +162,7 @@ class ProjectListItem extends React.Component {
           retryChunks: true,
           retryChunksLimit: 20,
           serverTimeoutCallback: () => {
-            if (!unstableConnection){
+            if (!unstableConnection && this.state.upload.uploading && this.state.upload.progress < 100.0){
               this.setUploadState({serverTimeouts: this.state.upload.serverTimeouts + 1});
             }
           },
@@ -180,7 +180,7 @@ class ProjectListItem extends React.Component {
         }
         this.checkTimeout = setTimeout(() => {
           const remainingFilesCount = this.state.upload.totalCount - this.state.upload.uploadedCount;
-          if (remainingFilesCount === 0 && this.state.upload.uploadedCount > 0){
+          if (remainingFilesCount === 0 && this.state.upload.uploadedCount > 0 && this.state.upload.uploading){
             // All files have uploaded!
             const COMMIT_RETRIES = 20;
 
@@ -203,7 +203,7 @@ class ProjectListItem extends React.Component {
                   contentType: 'application/json',
                   dataType: 'json',
                   type: 'POST',
-                  timeout: 30000,
+                  timeout: 15000,
                 }).done((task) => {
                   if (task && task.id){
                       this.setUploadState({uploading: false});
@@ -290,6 +290,10 @@ class ProjectListItem extends React.Component {
                 });
 
                 file.deltaBytesSent = bytesSent;
+
+                if (this.state.upload.progress === 100){
+                  checkQueueCompleted();
+                }
             }
         })
         .on("complete", (file) => {
@@ -357,7 +361,8 @@ class ProjectListItem extends React.Component {
                         this.setUploadState({
                             progress,
                             totalBytesSent,
-                            uploadedCount: this.state.upload.uploadedCount + 1
+                            uploadedCount: this.state.upload.uploadedCount + 1,
+                            serverTimeouts: 0
                         });
 
                         checkQueueCompleted();
