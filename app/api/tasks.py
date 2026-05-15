@@ -636,6 +636,7 @@ class TaskThumbnail(TaskNestedView):
             res = HttpResponse(content_type="image/png")
 
         res['Content-Disposition'] = 'inline'
+        res['Cache-Control'] = 'no-store'
         res.write(output.getvalue())
         output.close()
 
