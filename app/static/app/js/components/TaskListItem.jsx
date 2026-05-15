@@ -86,10 +86,12 @@ class TaskListItem extends React.Component {
 
   loadTimer(startTime){
     if (!this.processingTimeInterval){
+      this._timerStart = new Date().getTime();
+
       this.setState({time: startTime});
 
       this.processingTimeInterval = setInterval(() => {
-        this.setState({time: this.state.time += 1000});
+        this.setState({time: ((new Date().getTime() - this._timerStart)) + startTime } );
       }, 1000);
     }
   }
